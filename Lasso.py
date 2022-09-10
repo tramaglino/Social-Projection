@@ -6,7 +6,8 @@ from sklearn.metrics import mean_squared_error,r2_score
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.model_selection import GridSearchCV
 ## preparing data
-data_full = pd.read_csv('DatixAnalisi.csv')
+#data_full = pd.read_csv('DatixAnalisi.csv')
+data_full = pd.read_csv('Dati_bellissimi.csv')
 
 #define predictor and response variables
 X = data_full[["dx/sx", "Cons/prog", "Ind/col", "Flame", "Agreeableness", "Conscientiousness", "Em Stability", "Extroversion", "Openness", "Social Use"]]
