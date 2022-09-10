@@ -10,8 +10,8 @@ from sklearn.model_selection import GridSearchCV
 data_full = pd.read_csv('Dati_bellissimi.csv')
 
 #define predictor and response variables
-X = data_full[["dx/sx", "Cons/prog", "Ind/col", "Flame", "Agreeableness", "Conscientiousness", "Em Stability", "Extroversion", "Openness", "Social Use"]]
-y = data_full[["Corr"]]
+X = data_full[["Corr", "dx/sx", "Cons/prog", "Ind/col", "Flame", "Agreeableness", "Conscientiousness", "Em Stability", "Extroversion", "Openness", "Social Use"]]
+y = data_full[["TFCE"]]
 
 #Scaling everything
 scaler = StandardScaler()
@@ -41,7 +41,7 @@ print('Best Score: %s' % result.best_score_)
 print('Best Hyperparameters: %s' % result.best_params_)
 
 # Best model
-lasso_best = Lasso(alpha=0.1, fit_intercept=False, positive=True, selection='random').fit(X_train,Y_train)
+lasso_best = Lasso(alpha=0.04, fit_intercept=False, positive=True, selection='random').fit(X_train,Y_train)
 y_pred = lasso_best.predict(X_test)
 print(r2_score(Y_test,y_pred))
 
