@@ -41,7 +41,7 @@ print('Best Score: %s' % result.best_score_)
 print('Best Hyperparameters: %s' % result.best_params_)
 
 # Best model
-lasso_best = Lasso(alpha=0.04, fit_intercept=False, positive=True, selection='random').fit(X_train,Y_train)
+lasso_best = Lasso(alpha=0.02, fit_intercept=False, positive=False, selection='cyclic').fit(X_train,Y_train)
 y_pred = lasso_best.predict(X_test)
 print(r2_score(Y_test,y_pred))
 
