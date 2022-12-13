@@ -2,55 +2,40 @@ predittori <- read.table(file = "results/Predittori_tutti.csv", header = TRUE, s
 
 # Elimino le variabili che non voglio usare
 predittori <- predittori[, -1]
-predittori <- predittori[, -3]
+predittori <- predittori[, -4]
 
 predittori <- data.frame(scale(predittori, center = TRUE, scale = TRUE))
 
 
-# FItto il modello sulla variabile Yoon
-modAll <- lm(formula = Yoon ~ . - Barton - Corr, data = predittori)
-summary(modAll)
-modZero <- lm(formula = Yoon ~ 1, data = predittori)
-summary(modZero)
-
-# Fitto il modello su Barton
-modAll <- lm(formula = Barton ~ . - Yoon - Corr, data = predittori)
-summary(modAll)
-modZero <- lm(formula = Barton ~ 1, data = predittori)
-summary(modZero)
-
-# Fitto il modello su Corr
-modAll <- lm(formula = Corr ~ . - Yoon - Barton, data = predittori)
-summary(modAll)
-modZero <- lm(formula = Corr ~ 1, data = predittori)
-summary(modZero)
-# Scatterplot Matrix
-
-car::scatterplotMatrix(~ Yoon + Barton + Corr + Flame + Social.Use + dx.sx, regLine = list(col = 2),
+car::scatterplotMatrix(~ Yoon + Barton + Corr + TFCE + Flame + Social.Use + dx.sx, regLine = list(col = 2),
                        col = 1, smooth = list(col.smooth = 4, col.spread = 4),
                        data = predittori, main = "Scatterplot Matrix")
+
+corrplot::corrplot(cor(predittori), addCoef.col = "grey")
 
 
 n <- nrow(predittori)
 MASS::stepAIC(modAll, direction = "forward", scope = list(lower = modZero, upper = modAll), k = log(n))
 
-
 # Path: stepAIC.r
 
 # Aggiungo un modello con interazioni
 
-modYon <- lm(formula = Yoon ~ (Flame + Social.Use + Em.Stability + dx.sx + Agreeableness + Conscientiousness + Cons.prog)^3, data = predittori)
+modYon <- lm(formula = Yoon ~ (Flame + Social.Use + Em.Stability + dx.sx + Agreeableness + Conscientiousness + Cons.prog)^2, data = predittori)
 modYon_zero <- lm(formula = Yoon ~ 1, data = predittori)
-modBarton <- lm(formula = Barton ~ (Flame + Social.Use + Em.Stability + dx.sx + Agreeableness + Conscientiousness + Cons.prog)^3, data = predittori)
+modBarton <- lm(formula = Barton ~ (Flame + Social.Use + Em.Stability + dx.sx + Agreeableness + Conscientiousness + Cons.prog)^2, data = predittori)
 modBarton_zero <- lm(formula = Barton ~ 1, data = predittori)
-modCorr <- lm(formula = Corr ~ (Flame + Social.Use + Em.Stability + dx.sx + Agreeableness + Conscientiousness + Cons.prog)^3, data = predittori)
+modCorr <- lm(formula = Corr ~ (Flame + Social.Use + Em.Stability + dx.sx + Agreeableness + Conscientiousness + Cons.prog)^2, data = predittori)
 modCorrzero <- lm(formula = Corr ~ 1, data = predittori)
+modTFCE <- lm(formula = TFCE ~ (Flame + Social.Use + Em.Stability + dx.sx + Agreeableness + Conscientiousness + Cons.prog)^2, data = predittori)
+modTFCEzero <- lm(formula = TFCE ~ 1, data = predittori)
+
 
 n <- nrow(predittori)
 MASS::stepAIC(modYon, direction = "backward", scope = list(lower = modYon_zero, upper = modYon), k = log(n))
 MASS::stepAIC(modBarton, direction = "backward", scope = list(lower = modBarton_zero, upper = modBarton), k = log(n))
 MASS::stepAIC(modCorr, direction = "backward", scope = list(lower = modCorrzero, upper = modCorr), k = log(n))
-
+MASS::stepAIC(modTFCE, direction = "backward", scope = list(lower = modTFCEzero, upper = modTFCE), k = log(n))
 
 summary(lm(formula = Corr ~ Flame + Social.Use + Em.Stability + dx.sx + 
     Agreeableness + Conscientiousness + Cons.prog + Flame:Social.Use + 
@@ -73,9 +58,13 @@ summary(lm(Yoon ~ Flame + Social.Use + Em.Stability + Agreeableness + Conscienti
     Flame:Cons.prog + Social.Use:Em.Stability + Social.Use:Conscientiousness + 
     Conscientiousness:Cons.prog + Flame:Social.Use:Conscientiousness, data= predittori))
 
-summary(modYon)
-summary(modBarton)
-summary(modCorr)
+summary(lm(TFCE ~ Flame + Agreeableness +
+    Cons.prog + Flame:Social.Use + Flame:Conscientiousness + 
+    Social.Use:Conscientiousness + Social.Use:Agreeableness + 
+    Em.Stability:Agreeableness + Flame:Social.Use:Conscientiousness, data = predittori))
+
+
+# plot dei fit
 
 plot(Yoon ~ Flame + Social.Use + Em.Stability + dx.sx + Agreeableness + Conscientiousness + Cons.prog, data = predittori)
 abline(modYon, col = "red") 
@@ -88,3 +77,5 @@ abline(modBarton_zero, col = "blue")
 plot(Corr ~ Flame + Social.Use + Em.Stability + dx.sx + Agreeableness + Conscientiousness + Cons.prog, data = predittori)
 abline(modCorr, col = "red")
 abline(modCorrzero, col = "blue")
+
+
