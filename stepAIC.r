@@ -15,8 +15,6 @@ corrplot::corrplot(cor(predittori), addCoef.col = "grey")
 
 
 n <- nrow(predittori)
-MASS::stepAIC(modAll, direction = "forward", scope = list(lower = modZero, upper = modAll), k = log(n))
-
 # Path: stepAIC.r
 
 # Aggiungo un modello con interazioni
@@ -31,51 +29,66 @@ modTFCE <- lm(formula = TFCE ~ (Flame + Social.Use + Em.Stability + dx.sx + Agre
 modTFCEzero <- lm(formula = TFCE ~ 1, data = predittori)
 
 
-n <- nrow(predittori)
-MASS::stepAIC(modYon, direction = "backward", scope = list(lower = modYon_zero, upper = modYon), k = log(n))
-MASS::stepAIC(modBarton, direction = "backward", scope = list(lower = modBarton_zero, upper = modBarton), k = log(n))
-MASS::stepAIC(modCorr, direction = "backward", scope = list(lower = modCorrzero, upper = modCorr), k = log(n))
-MASS::stepAIC(modTFCE, direction = "backward", scope = list(lower = modTFCEzero, upper = modTFCE), k = log(n))
+stepwise_regYon <- MASS::stepAIC(modYon, direction = "backward", scope = list(lower = modYon_zero, upper = modYon), k = log(n))
+stepwise_regBarton <- MASS::stepAIC(modBarton, direction = "backward", scope = list(lower = modBarton_zero, upper = modBarton), k = log(n))
+stepwise_regCorr <- MASS::stepAIC(modCorr, direction = "backward", scope = list(lower = modCorrzero, upper = modCorr), k = log(n))
+stepwise_regTFCE <- MASS::stepAIC(modTFCE, direction = "backward", scope = list(lower = modTFCEzero, upper = modTFCE), k = log(n))
 
-summary(lm(formula = Corr ~ Flame + Social.Use + Em.Stability + dx.sx + 
-    Agreeableness + Conscientiousness + Cons.prog + Flame:Social.Use + 
-    Flame:Agreeableness + Flame:Conscientiousness + Flame:Cons.prog + 
-    Social.Use:Em.Stability + Social.Use:dx.sx + Social.Use:Conscientiousness + 
-    Social.Use:Cons.prog + Em.Stability:dx.sx + dx.sx:Conscientiousness + 
-    Conscientiousness:Cons.prog + Flame:Social.Use:Conscientiousness, 
-    data = predittori))
+modYon <- lm(formula = Yoon ~ Flame + Cons.prog + Flame:Cons.prog, data = predittori)
+modBarton <- stepwise_regBarton$call
+modCorr <- stepwise_regCorr$call
+modTFCE <- stepwise_regTFCE$call
 
-summary(lm(Barton ~ Flame + Social.Use + Em.Stability + dx.sx + Agreeableness + 
-    Conscientiousness + Cons.prog + Flame:Social.Use + Flame:Em.Stability + 
-    Flame:dx.sx + Flame:Conscientiousness + Flame:Cons.prog + 
-    Social.Use:Em.Stability + Social.Use:dx.sx + Social.Use:Conscientiousness + 
-    Social.Use:Cons.prog + Em.Stability:dx.sx + Em.Stability:Agreeableness + 
-    dx.sx:Agreeableness + dx.sx:Cons.prog + Agreeableness:Conscientiousness + 
-    Conscientiousness:Cons.prog + Flame:Social.Use:Conscientiousness + 
-    Social.Use:dx.sx:Cons.prog, data = predittori))
-summary(lm(Yoon ~ Flame + Social.Use + Em.Stability + Agreeableness + Conscientiousness + 
-    Cons.prog + Flame:Social.Use + Flame:Agreeableness + Flame:Conscientiousness + 
-    Flame:Cons.prog + Social.Use:Em.Stability + Social.Use:Conscientiousness + 
-    Conscientiousness:Cons.prog + Flame:Social.Use:Conscientiousness, data= predittori))
+#linearity assumption
 
-summary(lm(TFCE ~ Flame + Agreeableness +
-    Cons.prog + Flame:Social.Use + Flame:Conscientiousness + 
-    Social.Use:Conscientiousness + Social.Use:Agreeableness + 
-    Em.Stability:Agreeableness + Flame:Social.Use:Conscientiousness, data = predittori))
+par(mfrow = c(2, 2)) # We have 4 predictors
+plot(modYon, 1)
+termplot(modYon, partial.resid = TRUE)
 
+#normality
+plot(modYon, 2)
+shapiro.test(modYon$residuals) # p-value = 0.000000000000000222
 
-# plot dei fit
+#yeo-johnson transformation - non-normality patch
 
-plot(Yoon ~ Flame + Social.Use + Em.Stability + dx.sx + Agreeableness + Conscientiousness + Cons.prog, data = predittori)
-abline(modYon, col = "red") 
-abline(modYon_zero, col = "blue")
+YJ <- car::powerTransform(lm(predittori$Yoon ~ 1), family = "yjPower")
+(lambdaYJ <- YJ$lambda)
+YonTransf <- car::yjPower(U = predittori$Yoon, lambda = lambdaYJ)
+predittori <- cbind(predittori, YonTransf)
 
-plot(Barton ~ Flame + Social.Use + Em.Stability + dx.sx + Agreeableness + Conscientiousness + Cons.prog, data = predittori)
-abline(modBarton, col = "red")
-abline(modBarton_zero, col = "blue")
+# Comparison
+par(mfrow = c(1, 2))
+hist(predittori$Yoon, freq = FALSE, breaks = 10, ylim = c(0, 0.3))
+hist(predittori$YonTransf, freq = FALSE, breaks = 10, ylim = c(0, 0.3))
+modYon <- lm(formula = YonTransf ~ Flame + Cons.prog + Flame:Cons.prog, data = predittori)
+summary(modYon)
 
-plot(Corr ~ Flame + Social.Use + Em.Stability + dx.sx + Agreeableness + Conscientiousness + Cons.prog, data = predittori)
-abline(modCorr, col = "red")
-abline(modCorrzero, col = "blue")
+shapiro.test(modYon$residuals) # p-value = 0.000000000000000222
+plot(modYon, 2)
+nortest::lillie.test(modYon$residuals)
+qqnorm(modYon$residuals)
+qqline(modYon$residuals)
 
 
+#homoscedasticity
+car::ncvTest(modYon)
+plot(modYon, 3)
+#homoscedasticity ok
+
+#independence
+par(mfrow = c(2, 2))
+plot(modYon$residuals, type = "o", pch = 19)
+lag.plot(modYon$residuals, lags = 1, do.lines = FALSE)
+
+cor(modYon$residuals[-1], modYon$residuals[-length(modYon$residuals)])
+car::durbinWatsonTest(modYon)
+
+#independence ok
+
+#multicollinearity
+
+car::vif(modYon, type = 'predictor')
+
+#outliers
+
+plot(modYon, 5)
