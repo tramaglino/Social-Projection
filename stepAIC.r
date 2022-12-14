@@ -92,3 +92,7 @@ car::vif(modYon, type = 'predictor')
 #outliers
 
 plot(modYon, 5)
+
+# multicollinearity ok
+head(influence(model = modYon, do.coef = FALSE)$hat)
+
