@@ -14,10 +14,9 @@ car::scatterplotMatrix(~ Yoon + Barton + Corr + TFCE + Flame + Social.Use + dx.s
 corrplot::corrplot(cor(predittori), addCoef.col = "grey")
 
 
-n <- nrow(predittori)
-# Path: stepAIC.r
+#stepwise regression
 
-# Aggiungo un modello con interazioni
+n <- nrow(predittori)
 
 modYon <- lm(formula = Yoon ~ (Flame + Social.Use + Em.Stability + dx.sx + Agreeableness + Conscientiousness + Cons.prog)^2, data = predittori)
 modYon_zero <- lm(formula = Yoon ~ 1, data = predittori)
@@ -34,19 +33,18 @@ stepwise_regBarton <- MASS::stepAIC(modBarton, direction = "backward", scope = l
 stepwise_regCorr <- MASS::stepAIC(modCorr, direction = "backward", scope = list(lower = modCorrzero, upper = modCorr), k = log(n))
 stepwise_regTFCE <- MASS::stepAIC(modTFCE, direction = "backward", scope = list(lower = modTFCEzero, upper = modTFCE), k = log(n))
 
-modYon <- lm(formula = Yoon ~ Flame + Cons.prog + Flame:Cons.prog, data = predittori)
-modBarton <- stepwise_regBarton$call
-modCorr <- stepwise_regCorr$call
-modTFCE <- stepwise_regTFCE$call
-
+summary(stepwise_regYon)
+summary(stepwise_regBarton)
+summary(stepwise_regCorr)
+summary(stepwise_regTFCE)
 #linearity assumption
 
 par(mfrow = c(2, 2)) # We have 4 predictors
-plot(modYon, 1)
-termplot(modYon, partial.resid = TRUE)
+plot(stepwise_regYon, 1)
+termplot(stepwise_regYon, partial.resid = TRUE)
 
 #normality
-plot(modYon, 2)
+plot(stepwise_regYon, 2)
 shapiro.test(modYon$residuals) # p-value = 0.000000000000000222
 
 #yeo-johnson transformation - non-normality patch
@@ -82,7 +80,6 @@ lag.plot(modYon$residuals, lags = 1, do.lines = FALSE)
 
 cor(modYon$residuals[-1], modYon$residuals[-length(modYon$residuals)])
 car::durbinWatsonTest(modYon)
-
 #independence ok
 
 #multicollinearity
@@ -94,5 +91,61 @@ car::vif(modYon, type = 'predictor')
 plot(modYon, 5)
 
 # multicollinearity ok
+
+#high-leverage points
+
 head(influence(model = modYon, do.coef = FALSE)$hat)
+
+# Another option
+h <- hat(x = predittori[, 5:14])
+
+# 1% most influential points
+n <- length(predittori[, 5:14])
+p <- 1
+hist(h, breaks = 20)
+abline(v = (qchisq(0.99, df = p) + 1) / n, col = 3)
+
+
+
+# PCA regression
+#eliminate YonTransformed
+predittori <- predittori[, -15]
+
+
+# Simple call to pcr
+library(pls)
+modPcr <- pcr(Yoon ~ . - Barton - Corr - TFCE, data = predittori, scale = TRUE)
+
+summary(modPcr)
+names(modPcr)
+modPcr$coefficients[, , 10]
+
+
+modPcrCV1 <- pcr(Yoon ~ . -Barton - Corr - TFCE, data = predittori, scale = TRUE,
+                 validation = "LOO")
+
+summary(modPcrCV1)
+validationplot(modPcrCV1, val.type = "MSEP") # l = 8 gives the minimum CV
+
+modPcrCV10 <- pcr(Yoon ~ . -Barton - Corr - TFCE, data = predittori, scale = TRUE,
+                  validation = "CV")
+summary(modPcrCV10)
+validationplot(modPcrCV10, val.type = "MSEP")
+
+pca_socialpredict <- princomp(x = predittori[, 5:14], cor = TRUE, fix_sign = TRUE)
+summary(pca_socialpredict)
+plot(pca_socialpredict, type = "l")
+biplot(pca_socialpredict, cex = 0.75)
+
+pca3d::pca3d(pca_socialpredict, show.labels = TRUE, biplot = TRUE)
+rgl::rglwidget()
+
+#create new dataframe with the scores of PCA
+
+PCA <- data.frame("Yoon" = predittori$Yoon, pca_socialpredict$scores)
+modPCA <- lm(Yoon ~ ., data = PCA)
+summary(modPCA) 
+car::vif(modPCA)
+
+
 
